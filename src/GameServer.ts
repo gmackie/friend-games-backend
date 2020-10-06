@@ -7,38 +7,39 @@ import * as path from "path";
 interface Message {
   gameId: string;
   clientId: string;
-  
+  content: object;
 }
 
 export class GameServer {
-  public static readonly PORT: number = 8080;
-  private app: express.Application;
+  private app: Application;
   private server: http.Server;
   private io: Server;
-  private port: string | number;
+  private port: number;
 
-  constructor() {
-    this.app = express();
-    this.app.use(cors());
-
+  constructor(appInit: { port: number; }) {
+    const { port } = appInit;
+    this.port = port;
     this.server = http.createServer(this.app);
-    this.io = SocketIO.listen(this.server, { origins: '*:*'});
-
-    this.server.listen(this.port, () => {
-      console.log(`Running server on port ${this.port}`);
-    });
-
+    this.io = SocketIO(this.server, { origins: '*:*'});
+    
     this.io.on('connection', (socket: Socket) => {
-      console.log(`Connected client on port ${this.port}`);
+      console.log(`Connected client ${socket.id} on port ${this.port}`);
 
       socket.on('message', (m: Message) => {
-        console.log(`[server](message): ${JSON.stringify(m)}`);
-        this.io.emit('message', m);
+        console.log(`[${socket.id}](message): ${JSON.stringify(m)}`);
       });
 
       socket.on('disconnect', () => {
-        console.log('Client disconnected');
+        console.log(`Client disconnected ${socket.id}`);
       });
+    });
+
+
+  }
+
+  public listen(): http.Server {
+    return this.server.listen(this.port, () => {
+      console.log(`Running server on port ${this.port}`);
     });
   }
 
